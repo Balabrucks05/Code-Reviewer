@@ -37,18 +37,25 @@ export class ImportResolverService {
             return { error: `File not found: ${importPath}` };
         }
 
-        // Build a list of paths to try:
-        // 1. Original path in node_modules (v5 package)
-        // 2. Aliased v4 path (if applicable)
+        // Build a list of paths to try
         const pathsToTry: string[] = [
             path.join(this.nodeModulesPath, importPath),
         ];
+
+        // Also try from process.cwd() node_modules (application root)
+        const cwdNodeModules = path.resolve(process.cwd(), 'node_modules');
+        if (cwdNodeModules !== this.nodeModulesPath) {
+            pathsToTry.push(path.join(cwdNodeModules, importPath));
+        }
 
         // If this is an OZ import, also try the v4 aliased package
         for (const [prefix, alias] of Object.entries(this.v4Aliases)) {
             if (importPath.startsWith(prefix)) {
                 const v4Path = importPath.replace(prefix, alias);
                 pathsToTry.push(path.join(this.nodeModulesPath, v4Path));
+                if (cwdNodeModules !== this.nodeModulesPath) {
+                    pathsToTry.push(path.join(cwdNodeModules, v4Path));
+                }
                 break;
             }
         }
@@ -58,15 +65,16 @@ export class ImportResolverService {
             try {
                 if (fs.existsSync(fullPath)) {
                     const contents = fs.readFileSync(fullPath, 'utf8');
-                    this.logger.debug(`Resolved import: ${importPath} -> ${fullPath}`);
+                    // Only log debug if not previously cached/spammy
+                    // this.logger.debug(`Resolved import: ${importPath} -> ${fullPath}`);
                     return { contents };
                 }
             } catch (error) {
-                this.logger.warn(`Error reading ${fullPath}: ${error.message}`);
+                // Ignore read errors, try next path
             }
         }
 
-        this.logger.warn(`Import not found (tried ${pathsToTry.length} paths): ${importPath}`);
+        this.logger.warn(`Import failed: ${importPath}. Tried paths: ${pathsToTry.join(', ')}`);
         return { error: `File not found: ${importPath}` };
     }
 }

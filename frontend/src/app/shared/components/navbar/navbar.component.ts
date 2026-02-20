@@ -2,11 +2,11 @@ import { Component, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 
 @Component({
-    selector: 'app-navbar',
-    standalone: true,
-    imports: [RouterLink, RouterLinkActive],
-    template: `
-    <nav class="navbar glass">
+  selector: 'app-navbar',
+  standalone: true,
+  imports: [RouterLink, RouterLinkActive],
+  template: `
+    <nav class="navbar glass-premium">
       <div class="navbar-container">
         <a routerLink="/" class="navbar-brand">
           <div class="brand-icon">
@@ -22,7 +22,7 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
               <path d="M12 18l5 5 11-11" stroke="url(#logoGradient)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
             </svg>
           </div>
-          <span class="brand-text">ContractGuard</span>
+          <span class="brand-text gradient-text-animated">ContractGuard</span>
         </a>
 
         <div class="navbar-links">
@@ -45,7 +45,7 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
         </div>
 
         <div class="navbar-actions">
-          <button class="btn btn-primary glow" routerLink="/analyze">
+          <button class="btn btn-primary btn-liquid glow" routerLink="/analyze">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M12 5v14M5 12h14"/>
             </svg>
@@ -55,7 +55,7 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
       </div>
     </nav>
   `,
-    styles: [`
+  styles: [`
     .navbar {
       position: fixed;
       top: 0;
@@ -139,6 +139,33 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
       display: flex;
       align-items: center;
       gap: var(--space-3);
+    }
+
+    /* ── Mobile Responsive ── */
+    @media (max-width: 768px) {
+      .navbar { height: 60px; }
+      .navbar-container { padding: 0 var(--space-4); }
+      .brand-text { font-size: 1rem; }
+      .brand-icon { width: 28px; height: 28px; }
+      .nav-link {
+        padding: var(--space-2);
+        font-size: 0;
+        gap: 0;
+      }
+      .nav-link svg { font-size: initial; }
+      .navbar-actions .btn {
+        padding: var(--space-2) var(--space-3);
+        font-size: 0;
+        gap: 0;
+      }
+      .navbar-actions .btn svg { font-size: initial; }
+    }
+
+    @media (max-width: 480px) {
+      .navbar { height: 52px; }
+      .navbar-container { padding: 0 var(--space-3); }
+      .navbar-brand { gap: var(--space-2); }
+      .brand-text { font-size: 0.9rem; }
     }
   `]
 })

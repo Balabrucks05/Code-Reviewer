@@ -85,10 +85,12 @@ export interface AnalysisResult {
 }
 
 export interface SampleContract {
+    id: string; // added
     name: string;
     filename: string;
     content: string;
     description: string;
+    difficulty: 'Easy' | 'Medium' | 'Hard'; // added
 }
 
 @Injectable({ providedIn: 'root' })
@@ -97,11 +99,13 @@ export class AnalysisService {
 
     isLoading = signal(false);
     currentAnalysis = signal<AnalysisResult | null>(null);
+    lastAnalyzedCode = signal<ContractSource[] | null>(null);
 
     constructor(private http: HttpClient) { }
 
     analyzeContract(request: AnalysisRequest): Observable<AnalysisResult> {
         this.isLoading.set(true);
+        this.lastAnalyzedCode.set(request.contracts);
         return this.http.post<AnalysisResult>(`${this.apiUrl}/analysis`, request).pipe(
             map(result => {
                 this.currentAnalysis.set(result);

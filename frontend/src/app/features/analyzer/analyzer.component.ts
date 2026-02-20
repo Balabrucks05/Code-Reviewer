@@ -1,18 +1,19 @@
-import { Component, OnInit, signal, computed, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal, computed, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AnalysisService, SampleContract } from '../../core/services/analysis.service';
 import { ThemeService } from '../../core/services/theme.service';
+import gsap from 'gsap';
 
 @Component({
   selector: 'app-analyzer',
   standalone: true,
   imports: [FormsModule],
   template: `
-    <div class="analyzer fade-in">
-      <div class="analyzer-header">
+    <div class="analyzer">
+      <div class="analyzer-header" #analyzerHeader>
         <div class="header-content">
-          <h1>Contract Analyzer</h1>
+          <h1>Contract <span class="gradient-text-animated">Analyzer</span></h1>
           <p>Upload, paste, or fetch your Solidity contracts for comprehensive analysis</p>
         </div>
         <div class="header-actions">
@@ -33,7 +34,7 @@ import { ThemeService } from '../../core/services/theme.service';
                 </svg>
             }
           </button>
-          <button class="btn btn-primary glow" (click)="analyze()" [disabled]="isAnalyzing() || !code()">
+          <button class="btn btn-primary btn-liquid glow" (click)="analyze()" [disabled]="isAnalyzing() || !code()">
             @if (isAnalyzing()) {
               <div class="btn-spinner"></div>
               Analyzing...
@@ -48,7 +49,7 @@ import { ThemeService } from '../../core/services/theme.service';
         </div>
       </div>
 
-      <div class="analyzer-options glass">
+      <div class="analyzer-options glass-premium" #optionsBar>
         <div class="option-group">
           <label class="option">
             <input type="checkbox" [(ngModel)]="options.securityAudit">
@@ -88,7 +89,7 @@ import { ThemeService } from '../../core/services/theme.service';
       </div>
 
       <!-- Source Tabs -->
-      <div class="source-tabs">
+      <div class="source-tabs" #sourceTabs>
         <button class="source-tab" [class.active]="activeTab() === 'upload'" (click)="setActiveTab('upload')">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
@@ -115,7 +116,7 @@ import { ThemeService } from '../../core/services/theme.service';
       @if (activeTab() === 'upload') {
         <div class="tab-content fade-in">
           <div class="upload-area" (dragover)="onDragOver($event)" (dragleave)="onDragLeave($event)" (drop)="onDrop($event)" [class.drag-over]="isDragOver()">
-            <label class="upload-zone glass" for="fileInput">
+            <label class="upload-zone glass-premium glow-border" for="fileInput">
               <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                 <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
               </svg>
@@ -130,7 +131,7 @@ import { ThemeService } from '../../core/services/theme.service';
       <!-- Live URL Tab Content -->
       @if (activeTab() === 'liveUrl') {
         <div class="tab-content fade-in">
-          <div class="fetch-area glass">
+          <div class="fetch-area glass-premium">
             <div class="fetch-header">
               <h3>Block Explorer URL</h3>
               <p class="text-secondary">Enter a block explorer URL to audit a deployed smart contract</p>
@@ -176,7 +177,7 @@ import { ThemeService } from '../../core/services/theme.service';
       <!-- GitHub Tab Content -->
       @if (activeTab() === 'github') {
         <div class="tab-content fade-in">
-          <div class="fetch-area glass">
+          <div class="fetch-area glass-premium">
             <div class="fetch-header">
               <h3>GitHub Repository</h3>
               <p class="text-secondary">Enter a GitHub URL to fetch Solidity files from a public repository</p>
@@ -239,7 +240,7 @@ import { ThemeService } from '../../core/services/theme.service';
 
       <!-- Code Editor (shared across all tabs) -->
       <div class="editor-container">
-        <div class="editor-wrapper glass">
+        <div class="editor-wrapper glass-premium glow-border" #editorWrapper>
           <div class="editor-header">
             <div class="editor-tabs">
               <button class="tab active">
@@ -294,7 +295,17 @@ contract MyContract {
       <!-- Loading Overlay -->
       @if (isAnalyzing()) {
         <div class="loading-overlay">
-          <div class="loading-content glass">
+          <!-- Matrix Rain Background -->
+          <div class="matrix-rain">
+            @for (col of matrixCols; track $index) {
+              <div class="matrix-col" [style.left.%]="col.left" [style.animation-duration]="col.speed + 's'" [style.animation-delay]="col.delay + 's'">
+                @for (char of col.chars; track $index) {
+                  <span>{{ char }}</span>
+                }
+              </div>
+            }
+          </div>
+          <div class="loading-content glass-premium glow-border">
             <div class="magic-loader">
               <div class="loader-ring"></div>
               <div class="loader-ring"></div>
@@ -303,7 +314,7 @@ contract MyContract {
                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
               </svg>
             </div>
-            <h3>Analyzing Contract</h3>
+            <h3 class="gradient-text-animated">Analyzing Contract</h3>
             <p class="loading-status">{{ loadingStatus() }}</p>
             <div class="progress-bar">
               <div class="progress-fill" [style.width.%]="progress()"></div>
@@ -426,7 +437,7 @@ contract MyContract {
       background: var(--color-bg-secondary);
       padding: var(--space-1);
       border-radius: var(--radius-lg);
-      border: 1px solid rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--color-border-subtle);
     }
 
     .source-tab {
@@ -444,18 +455,20 @@ contract MyContract {
       font-size: 0.875rem;
       font-weight: 500;
       cursor: pointer;
-      transition: all 0.3s var(--ease-out-expo);
+      transition: all 0.4s var(--ease-out-expo);
     }
 
     .source-tab:hover {
       color: var(--color-text-primary);
-      background: rgba(255, 255, 255, 0.03);
+      background: var(--color-fill-subtle);
+      transform: translateY(-1px);
     }
 
     .source-tab.active {
       background: var(--gradient-primary);
       color: white;
       box-shadow: var(--shadow-glow);
+      transform: scale(1.02);
     }
 
     /* Tab Content */
@@ -578,7 +591,7 @@ contract MyContract {
       background: var(--color-bg-tertiary);
       padding: 2px 8px;
       border-radius: var(--radius-full);
-      border: 1px solid rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--color-border-subtle);
     }
 
     /* GitHub Hints */
@@ -658,8 +671,8 @@ contract MyContract {
       justify-content: space-between;
       align-items: center;
       padding: var(--space-2) var(--space-4);
-      background: rgba(0, 0, 0, 0.3);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      background: var(--editor-header-bg);
+      border-bottom: 1px solid var(--editor-border);
     }
 
     .editor-tabs {
@@ -694,7 +707,7 @@ contract MyContract {
 
     .line-numbers {
       padding: var(--space-4) var(--space-3);
-      background: rgba(0, 0, 0, 0.2);
+      background: var(--editor-line-bg);
       color: var(--color-text-muted);
       font-family: var(--font-mono);
       font-size: 0.8rem;
@@ -753,12 +766,40 @@ contract MyContract {
     .loading-overlay {
       position: fixed;
       inset: 0;
-      background: rgba(10, 10, 15, 0.9);
+      background: rgba(10, 10, 15, 0.95);
       display: flex;
       align-items: center;
       justify-content: center;
       z-index: var(--z-modal);
       animation: fadeIn 0.3s var(--ease-out-expo);
+      overflow: hidden;
+    }
+
+    /* Matrix Rain */
+    .matrix-rain {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      pointer-events: none;
+    }
+    .matrix-col {
+      position: absolute;
+      top: -100%;
+      display: flex;
+      flex-direction: column;
+      font-family: var(--font-mono);
+      font-size: 14px;
+      color: rgba(34, 211, 238, 0.25);
+      animation: matrix-fall linear infinite;
+      line-height: 1.4;
+    }
+    .matrix-col span:first-child {
+      color: rgba(99, 102, 241, 0.6);
+      text-shadow: 0 0 8px rgba(99, 102, 241, 0.4);
+    }
+    @keyframes matrix-fall {
+      0% { transform: translateY(0); }
+      100% { transform: translateY(250%); }
     }
 
     .loading-content {
@@ -766,6 +807,7 @@ contract MyContract {
       border-radius: var(--radius-xl);
       text-align: center;
       max-width: 400px;
+      z-index: 1;
     }
 
     .magic-loader {
@@ -820,6 +862,8 @@ contract MyContract {
     .loading-status {
       color: var(--color-text-secondary);
       margin-bottom: var(--space-4);
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
     }
 
     .progress-bar {
@@ -831,14 +875,72 @@ contract MyContract {
 
     .progress-fill {
       height: 100%;
-      background: var(--gradient-primary);
+      background: var(--gradient-neon);
+      background-size: 200% 100%;
       border-radius: var(--radius-full);
-      transition: width 0.3s var(--ease-out-expo);
+      transition: width 0.5s var(--ease-out-expo);
+      animation: gradient-flow 2s linear infinite;
+    }
+
+    /* ── Mobile Responsive ── */
+    @media (max-width: 768px) {
+      .analyzer { padding: 0 var(--space-4); }
+      .analyzer-header {
+        flex-direction: column;
+        gap: var(--space-4);
+        align-items: stretch;
+      }
+      .header-actions {
+        justify-content: flex-start;
+      }
+      .analyzer-options {
+        flex-direction: column;
+        gap: var(--space-3);
+        padding: var(--space-3);
+        align-items: flex-start;
+      }
+      .option-group {
+        flex-wrap: wrap;
+        gap: var(--space-3);
+      }
+      .source-tab {
+        padding: var(--space-2) var(--space-3);
+        font-size: 0.8rem;
+      }
+      .upload-zone { padding: var(--space-6); }
+      .fetch-area { padding: var(--space-5); }
+      .fetch-input-group {
+        flex-direction: column;
+      }
+      .editor-wrapper { min-height: 350px; }
+      .line-numbers { min-width: 36px; padding: var(--space-3) var(--space-2); }
+      .editor-textarea {
+        padding: var(--space-3);
+        font-size: 0.75rem;
+      }
+      .editor-header { padding: var(--space-2) var(--space-3); }
+    }
+
+    @media (max-width: 480px) {
+      .analyzer { padding: 0 var(--space-3); }
+      .header-content h1 { font-size: 1.5rem; }
+      .header-content p { font-size: 0.85rem; }
+      .source-tab { font-size: 0; gap: 0; padding: var(--space-2); }
+      .source-tab svg { font-size: initial; }
+      .upload-zone { padding: var(--space-4); }
+      .upload-title { font-size: 0.9rem; }
+      .editor-wrapper { min-height: 280px; }
+      .fetch-area { padding: var(--space-3); }
+      .fetch-header h3 { font-size: 1rem; }
     }
   `]
 })
-export class AnalyzerComponent implements OnInit, AfterViewInit {
+export class AnalyzerComponent implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('editorTextarea') editorTextarea!: ElementRef<HTMLTextAreaElement>;
+  @ViewChild('analyzerHeader') analyzerHeader!: ElementRef;
+  @ViewChild('optionsBar') optionsBar!: ElementRef;
+  @ViewChild('sourceTabs') sourceTabs!: ElementRef;
+  @ViewChild('editorWrapper') editorWrapper!: ElementRef;
 
   codeValue = '';
   code = signal('');
@@ -861,6 +963,17 @@ export class AnalyzerComponent implements OnInit, AfterViewInit {
     gasOptimization: true,
     aiReview: true
   };
+
+  // Matrix rain columns for loading overlay
+  matrixCols = Array.from({ length: 20 }, () => ({
+    left: Math.random() * 100,
+    speed: 4 + Math.random() * 6,
+    delay: Math.random() * 3,
+    chars: Array.from({ length: 15 }, () => {
+      const chars = '0123456789abcdef{}();=><+-*/&|!^~';
+      return chars[Math.floor(Math.random() * chars.length)];
+    })
+  }));
 
   lineCount = computed(() => {
     const lines = this.code().split('\n').length;
@@ -885,14 +998,12 @@ export class AnalyzerComponent implements OnInit, AfterViewInit {
   ) { }
 
   toggleTheme() {
-    const current = this.themeService.preference();
-    if (current === 'system') this.themeService.setTheme('light');
-    else if (current === 'light') this.themeService.setTheme('dark');
-    else this.themeService.setTheme('system');
+    const effective = this.themeService.currentTheme();
+    this.themeService.setTheme(effective === 'dark' ? 'light' : 'dark');
   }
 
   ngOnInit() {
-    // Check for pre-selected sample
+    // Check for pre-selected sample (from landing page)
     const sampleStr = sessionStorage.getItem('selectedSample');
     if (sampleStr) {
       const sample = JSON.parse(sampleStr) as SampleContract;
@@ -900,6 +1011,15 @@ export class AnalyzerComponent implements OnInit, AfterViewInit {
       this.code.set(sample.content);
       this.filename.set(sample.filename);
       sessionStorage.removeItem('selectedSample');
+    } else {
+      // Check for last analyzed code (returning from results)
+      const lastCode = this.analysisService.lastAnalyzedCode();
+      if (lastCode && lastCode.length > 0) {
+        const file = lastCode[0];
+        this.codeValue = file.content;
+        this.code.set(file.content);
+        this.filename.set(file.filename);
+      }
     }
   }
 
@@ -912,6 +1032,17 @@ export class AnalyzerComponent implements OnInit, AfterViewInit {
         }
       });
     }
+
+    // GSAP entrance animations
+    const tl = gsap.timeline({ defaults: { ease: 'expo.out' } });
+    tl.from(this.analyzerHeader?.nativeElement, { opacity: 0, y: -20, duration: 0.6 })
+      .from(this.optionsBar?.nativeElement, { opacity: 0, y: 15, duration: 0.5 }, '-=0.3')
+      .from(this.sourceTabs?.nativeElement, { opacity: 0, y: 15, duration: 0.5 }, '-=0.3')
+      .from(this.editorWrapper?.nativeElement, { opacity: 0, y: 25, duration: 0.7 }, '-=0.3');
+  }
+
+  ngOnDestroy() {
+    gsap.killTweensOf('*');
   }
 
   setActiveTab(tab: 'upload' | 'liveUrl' | 'github') {

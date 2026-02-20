@@ -65,10 +65,17 @@ let ImportResolverService = ImportResolverService_1 = class ImportResolverServic
         const pathsToTry = [
             path.join(this.nodeModulesPath, importPath),
         ];
+        const cwdNodeModules = path.resolve(process.cwd(), 'node_modules');
+        if (cwdNodeModules !== this.nodeModulesPath) {
+            pathsToTry.push(path.join(cwdNodeModules, importPath));
+        }
         for (const [prefix, alias] of Object.entries(this.v4Aliases)) {
             if (importPath.startsWith(prefix)) {
                 const v4Path = importPath.replace(prefix, alias);
                 pathsToTry.push(path.join(this.nodeModulesPath, v4Path));
+                if (cwdNodeModules !== this.nodeModulesPath) {
+                    pathsToTry.push(path.join(cwdNodeModules, v4Path));
+                }
                 break;
             }
         }
@@ -76,15 +83,13 @@ let ImportResolverService = ImportResolverService_1 = class ImportResolverServic
             try {
                 if (fs.existsSync(fullPath)) {
                     const contents = fs.readFileSync(fullPath, 'utf8');
-                    this.logger.debug(`Resolved import: ${importPath} -> ${fullPath}`);
                     return { contents };
                 }
             }
             catch (error) {
-                this.logger.warn(`Error reading ${fullPath}: ${error.message}`);
             }
         }
-        this.logger.warn(`Import not found (tried ${pathsToTry.length} paths): ${importPath}`);
+        this.logger.warn(`Import failed: ${importPath}. Tried paths: ${pathsToTry.join(', ')}`);
         return { error: `File not found: ${importPath}` };
     }
 };
