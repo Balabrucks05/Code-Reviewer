@@ -11,4 +11,5 @@ export declare class AnalysisOptionsDto {
 export declare class AnalyzeContractDto {
     contracts: ContractSourceDto[];
     options?: AnalysisOptionsDto;
+    userId?: string;
 }

@@ -54,10 +54,11 @@ let AstParserService = AstParserService_1 = class AstParserService {
         this.importResolver = importResolver;
     }
     async compile(sources, version = '0.8.20') {
-        this.logger.log(`Compiling ${sources.length} source file(s) with solc ${version}`);
+        this.logger.debug(`Compiling ${sources.length} source file(s) with solc ${version}`);
         const input = this.createCompilerInput(sources);
         try {
-            const importCallback = (path) => this.importResolver.resolveImport(path);
+            const combinedSource = sources.map(s => s.content).join('\n');
+            const importCallback = (path) => this.importResolver.resolveImport(path, combinedSource);
             const output = JSON.parse(solc.compile(JSON.stringify(input), { import: importCallback }));
             return this.processCompilerOutput(output, sources);
         }

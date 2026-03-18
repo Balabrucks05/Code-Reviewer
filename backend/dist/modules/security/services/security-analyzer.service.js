@@ -40,14 +40,14 @@ let SecurityAnalyzerService = SecurityAnalyzerService_1 = class SecurityAnalyzer
         ];
     }
     async analyze(contract, sourceContent) {
-        this.logger.log(`Running security analysis on ${contract.name}`);
+        this.logger.debug(`Running security analysis on ${contract.name}`);
         const allIssues = [];
         for (const rule of this.rules) {
             try {
                 const issues = await rule.check(contract, sourceContent);
                 allIssues.push(...issues);
                 if (issues.length > 0) {
-                    this.logger.log(`${rule.name}: Found ${issues.length} issue(s)`);
+                    this.logger.debug(`${rule.name}: Found ${issues.length} issue(s)`);
                 }
             }
             catch (error) {

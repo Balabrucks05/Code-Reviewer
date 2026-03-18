@@ -25,8 +25,23 @@ let AnalysisController = class AnalysisController {
     async analyzeContract(dto) {
         return this.analysisService.analyze(dto);
     }
-    async getAnalysis(id) {
-        return this.analysisService.getAnalysisById(id);
+    async getHistory(userId) {
+        return this.analysisService.getHistoryByUserId(userId);
+    }
+    async getAnalysis(id, userId) {
+        try {
+            const analysis = await this.analysisService.getAnalysisById(id, userId);
+            if (!analysis) {
+                throw new common_1.NotFoundException('Analysis not found');
+            }
+            return analysis;
+        }
+        catch (error) {
+            if (error.message.includes('Forbidden')) {
+                throw new common_1.ForbiddenException(error.message);
+            }
+            throw error;
+        }
     }
     async getSecurityIssues(id) {
         return this.analysisService.getSecurityIssues(id);
@@ -57,13 +72,24 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], AnalysisController.prototype, "analyzeContract", null);
 __decorate([
+    (0, common_1.Get)('history/:userId'),
+    (0, swagger_1.ApiOperation)({ summary: 'Get analysis history for a user' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'User history retrieved' }),
+    __param(0, (0, common_1.Param)('userId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], AnalysisController.prototype, "getHistory", null);
+__decorate([
     (0, common_1.Get)(':id'),
     (0, swagger_1.ApiOperation)({ summary: 'Get analysis result by ID' }),
     (0, swagger_1.ApiResponse)({ status: 200, description: 'Analysis result retrieved' }),
     (0, swagger_1.ApiResponse)({ status: 404, description: 'Analysis not found' }),
+    (0, swagger_1.ApiResponse)({ status: 403, description: 'Forbidden access to analysis' }),
     __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Query)('userId')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
+    __metadata("design:paramtypes", [String, String]),
     __metadata("design:returntype", Promise)
 ], AnalysisController.prototype, "getAnalysis", null);
 __decorate([

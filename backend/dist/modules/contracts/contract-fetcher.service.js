@@ -36,7 +36,7 @@ let ContractFetcherService = ContractFetcherService_1 = class ContractFetcherSer
         this.configService = configService;
         this.apiKey = this.configService.get('ETHERSCAN_API_KEY') || '';
         if (this.apiKey) {
-            this.logger.log('Etherscan API key loaded');
+            this.logger.debug('Etherscan API key loaded');
         }
         else {
             this.logger.warn('No ETHERSCAN_API_KEY found in .env — explorer fetch will fail');
@@ -44,7 +44,7 @@ let ContractFetcherService = ContractFetcherService_1 = class ContractFetcherSer
     }
     async fetchFromExplorer(url) {
         const { chainId, address, networkName } = this.parseExplorerUrl(url);
-        this.logger.log(`Fetching contract ${address} from ${networkName} (chainId: ${chainId})`);
+        this.logger.debug(`Fetching contract ${address} from ${networkName} (chainId: ${chainId})`);
         if (!this.apiKey) {
             throw new Error('Etherscan API key not configured. Add ETHERSCAN_API_KEY to backend/.env');
         }
@@ -80,12 +80,12 @@ let ContractFetcherService = ContractFetcherService_1 = class ContractFetcherSer
     async fetchFromGithub(url) {
         const parsed = this.parseGithubUrl(url);
         if (parsed.type === 'file') {
-            this.logger.log(`Fetching single file from GitHub: ${parsed.path}`);
+            this.logger.debug(`Fetching single file from GitHub: ${parsed.path}`);
             const content = await this.fetchGithubRawContent(parsed.owner, parsed.repo, parsed.branch, parsed.path);
             const filename = parsed.path.split('/').pop() || 'contract.sol';
             return { contracts: [{ filename, content }] };
         }
-        this.logger.log(`Fetching directory ${parsed.path} from GitHub: ${parsed.owner}/${parsed.repo}`);
+        this.logger.debug(`Fetching directory ${parsed.path} from GitHub: ${parsed.owner}/${parsed.repo}`);
         const contracts = await this.fetchGithubDirectory(parsed.owner, parsed.repo, parsed.branch, parsed.path);
         return { contracts };
     }
@@ -191,7 +191,7 @@ let ContractFetcherService = ContractFetcherService_1 = class ContractFetcherSer
         if (solFiles.length === 0) {
             throw new Error('No .sol files found in the specified path');
         }
-        this.logger.log(`Found ${solFiles.length} Solidity file(s) in ${owner}/${repo}/${dirPath || '(root)'}`);
+        this.logger.debug(`Found ${solFiles.length} Solidity file(s) in ${owner}/${repo}/${dirPath || '(root)'}`);
         const contracts = [];
         for (const file of solFiles) {
             try {

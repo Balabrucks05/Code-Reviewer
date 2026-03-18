@@ -16,5 +16,4 @@ import { ContractsModule } from './modules/contracts/contracts.module';
     ContractsModule,
   ],
 })
-export class AppModule { }
-
+export class AppModule {}

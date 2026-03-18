@@ -56,35 +56,50 @@ let ImportResolverService = ImportResolverService_1 = class ImportResolverServic
     };
     constructor() {
         this.nodeModulesPath = path.resolve(__dirname, '..', '..', '..', '..', 'node_modules');
-        this.logger.log(`Import resolver using node_modules at: ${this.nodeModulesPath}`);
+        this.logger.debug(`Import resolver using node_modules at: ${this.nodeModulesPath}`);
     }
-    resolveImport(importPath) {
+    resolveImport(importPath, sourceRef) {
         if (!importPath.startsWith('@')) {
             return { error: `File not found: ${importPath}` };
         }
         const pathsToTry = [
             path.join(this.nodeModulesPath, importPath),
         ];
-        for (const [prefix, alias] of Object.entries(this.v4Aliases)) {
-            if (importPath.startsWith(prefix)) {
-                const v4Path = importPath.replace(prefix, alias);
-                pathsToTry.push(path.join(this.nodeModulesPath, v4Path));
-                break;
+        const cwdNodeModules = path.resolve(process.cwd(), 'node_modules');
+        if (cwdNodeModules !== this.nodeModulesPath) {
+            pathsToTry.push(path.join(cwdNodeModules, importPath));
+        }
+        let preferV4 = false;
+        if (sourceRef) {
+            const hasV5Ownable = sourceRef.includes('Ownable(msg.sender)') || sourceRef.includes('Ownable(initialOwner)') || sourceRef.match(/Ownable\s*\([^)]+\)/) !== null;
+            preferV4 = !hasV5Ownable;
+        }
+        else {
+            preferV4 = true;
+        }
+        if (preferV4) {
+            for (const [prefix, alias] of Object.entries(this.v4Aliases)) {
+                if (importPath.startsWith(prefix)) {
+                    const v4Path = importPath.replace(prefix, alias);
+                    if (cwdNodeModules !== this.nodeModulesPath) {
+                        pathsToTry.unshift(path.join(cwdNodeModules, v4Path));
+                    }
+                    pathsToTry.unshift(path.join(this.nodeModulesPath, v4Path));
+                    break;
+                }
             }
         }
         for (const fullPath of pathsToTry) {
             try {
                 if (fs.existsSync(fullPath)) {
                     const contents = fs.readFileSync(fullPath, 'utf8');
-                    this.logger.debug(`Resolved import: ${importPath} -> ${fullPath}`);
                     return { contents };
                 }
             }
             catch (error) {
-                this.logger.warn(`Error reading ${fullPath}: ${error.message}`);
             }
         }
-        this.logger.warn(`Import not found (tried ${pathsToTry.length} paths): ${importPath}`);
+        this.logger.warn(`Import failed: ${importPath}. Tried paths: ${pathsToTry.join(', ')}`);
         return { error: `File not found: ${importPath}` };
     }
 };

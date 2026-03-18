@@ -68,6 +68,7 @@ __decorate([
 class AnalyzeContractDto {
     contracts;
     options;
+    userId;
 }
 exports.AnalyzeContractDto = AnalyzeContractDto;
 __decorate([
@@ -87,4 +88,10 @@ __decorate([
     (0, class_transformer_1.Type)(() => AnalysisOptionsDto),
     __metadata("design:type", AnalysisOptionsDto)
 ], AnalyzeContractDto.prototype, "options", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: 'User ID of the requester' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], AnalyzeContractDto.prototype, "userId", void 0);
 //# sourceMappingURL=analyze-contract.dto.js.map

@@ -22,7 +22,7 @@ let AnalysisService = AnalysisService_1 = class AnalysisService {
         this.pipelineService = pipelineService;
     }
     async analyze(dto) {
-        this.logger.log(`Starting analysis for ${dto.contracts.length} contract(s)`);
+        this.logger.debug(`Starting analysis for ${dto.contracts.length} contract(s)`);
         const analysisId = (0, uuid_1.v4)();
         const startTime = Date.now();
         try {
@@ -50,6 +50,7 @@ let AnalysisService = AnalysisService_1 = class AnalysisService {
                     overallScore: 0,
                     success: false,
                     compilationErrors: result.compilationErrors,
+                    userId: dto.userId,
                 };
                 this.analysisCache.set(analysisId, errorResult);
                 return errorResult;
@@ -64,9 +65,10 @@ let AnalysisService = AnalysisService_1 = class AnalysisService {
                 codeQualityScore: result.codeQualityScore,
                 overallScore: this.calculateOverallScore(result),
                 success: true,
+                userId: dto.userId,
             };
             this.analysisCache.set(analysisId, analysisResult);
-            this.logger.log(`Analysis ${analysisId} completed in ${Date.now() - startTime}ms`);
+            this.logger.debug(`Analysis ${analysisId} completed in ${Date.now() - startTime}ms`);
             return analysisResult;
         }
         catch (error) {
@@ -74,8 +76,18 @@ let AnalysisService = AnalysisService_1 = class AnalysisService {
             throw error;
         }
     }
-    async getAnalysisById(id) {
-        return this.analysisCache.get(id) || null;
+    async getAnalysisById(id, userId) {
+        const analysis = this.analysisCache.get(id);
+        if (!analysis)
+            return null;
+        if (analysis.userId && analysis.userId !== userId) {
+            throw new Error('Forbidden: You do not have access to this report.');
+        }
+        return analysis;
+    }
+    async getHistoryByUserId(userId) {
+        const history = Array.from(this.analysisCache.values()).filter(a => a.userId === userId);
+        return history.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
     }
     async getSecurityIssues(id) {
         const analysis = await this.getAnalysisById(id);

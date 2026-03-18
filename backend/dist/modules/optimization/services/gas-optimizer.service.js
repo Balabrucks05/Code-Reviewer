@@ -21,7 +21,7 @@ let GasOptimizerService = GasOptimizerService_1 = class GasOptimizerService {
         this.bytecodeAnalyzer = bytecodeAnalyzer;
     }
     async analyze(contract, sourceContent) {
-        this.logger.log(`Analyzing gas optimizations for ${contract.name}`);
+        this.logger.debug(`Analyzing gas optimizations for ${contract.name}`);
         const optimizations = [];
         const lines = sourceContent.split('\n');
         optimizations.push(...this.checkStoragePacking(sourceContent, lines));

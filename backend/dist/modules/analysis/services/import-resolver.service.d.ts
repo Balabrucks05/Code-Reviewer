@@ -3,7 +3,7 @@ export declare class ImportResolverService {
     private readonly nodeModulesPath;
     private readonly v4Aliases;
     constructor();
-    resolveImport(importPath: string): {
+    resolveImport(importPath: string, sourceRef?: string): {
         contents: string;
     } | {
         error: string;

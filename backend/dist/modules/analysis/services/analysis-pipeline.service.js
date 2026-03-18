@@ -29,8 +29,8 @@ let AnalysisPipelineService = AnalysisPipelineService_1 = class AnalysisPipeline
         this.aiReview = aiReview;
     }
     async runPipeline(input) {
-        this.logger.log('Starting analysis pipeline...');
-        this.logger.log('Step 1: Compiling contracts...');
+        this.logger.debug('Starting analysis pipeline...');
+        this.logger.debug('Step 1: Compiling contracts...');
         const compilationResult = await this.astParser.compile(input.contracts, input.options.compilerVersion);
         if (!compilationResult.success) {
             this.logger.warn('Compilation failed - returning error response');
@@ -56,7 +56,7 @@ let AnalysisPipelineService = AnalysisPipelineService_1 = class AnalysisPipeline
         let totalGasScore = 0;
         let totalCodeQualityScore = 0;
         for (const contract of compilationResult.contracts) {
-            this.logger.log(`Analyzing contract: ${contract.name}`);
+            this.logger.debug(`Analyzing contract: ${contract.name}`);
             const sourceContent = input.contracts.find(c => c.content.includes(`contract ${contract.name}`))?.content || '';
             const [securityIssues, gasOptimizations, aiReviewComments] = await Promise.all([
                 this.runSecurityAnalysis(contract, sourceContent, input.options.enableSecurityAudit),
@@ -64,7 +64,16 @@ let AnalysisPipelineService = AnalysisPipelineService_1 = class AnalysisPipeline
                 this.runAiReview(contract, sourceContent, input.options.enableAiReview),
             ]);
             const securityScore = this.calculateSecurityScore(securityIssues);
-            const gasScore = this.calculateGasScore(contract, gasOptimizations);
+            const seenGas = new Set();
+            const uniqueGasOptimizations = [];
+            for (const opt of gasOptimizations) {
+                const key = `${opt.type}-${opt.title}-${opt.location.startLine}`;
+                if (!seenGas.has(key)) {
+                    seenGas.add(key);
+                    uniqueGasOptimizations.push(opt);
+                }
+            }
+            const gasScore = this.calculateGasScore(contract, uniqueGasOptimizations);
             const codeQualityScore = this.calculateCodeQualityScore(aiReviewComments);
             totalSecurityScore += securityScore;
             totalGasScore += gasScore;
@@ -74,7 +83,7 @@ let AnalysisPipelineService = AnalysisPipelineService_1 = class AnalysisPipeline
                 bytecodeSize: contract.deployedBytecode.length / 2,
                 estimatedDeploymentGas: this.estimateDeploymentGas(contract.bytecode),
                 securityIssues,
-                gasOptimizations,
+                gasOptimizations: uniqueGasOptimizations,
                 aiReviewComments,
             });
         }
@@ -95,7 +104,7 @@ let AnalysisPipelineService = AnalysisPipelineService_1 = class AnalysisPipeline
             return await this.securityAnalyzer.analyze(contract, sourceContent);
         }
         catch (error) {
-            this.logger.warn(`Security analysis failed for ${contract.name}: ${error.message}`);
+            this.logger.warn(`Security analysis failed for ${contract.name}: ${error.message} `);
             return [];
         }
     }
@@ -106,7 +115,7 @@ let AnalysisPipelineService = AnalysisPipelineService_1 = class AnalysisPipeline
             return await this.gasOptimizer.analyze(contract, sourceContent);
         }
         catch (error) {
-            this.logger.warn(`Gas optimization failed for ${contract.name}: ${error.message}`);
+            this.logger.warn(`Gas optimization failed for ${contract.name}: ${error.message} `);
             return [];
         }
     }
@@ -117,7 +126,7 @@ let AnalysisPipelineService = AnalysisPipelineService_1 = class AnalysisPipeline
             return await this.aiReview.reviewContract(contract, sourceContent);
         }
         catch (error) {
-            this.logger.warn(`AI review failed for ${contract.name}: ${error.message}`);
+            this.logger.warn(`AI review failed for ${contract.name}: ${error.message} `);
             return [];
         }
     }

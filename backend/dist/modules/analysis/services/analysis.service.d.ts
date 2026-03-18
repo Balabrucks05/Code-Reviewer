@@ -2,6 +2,7 @@ import { AnalysisPipelineService } from './analysis-pipeline.service';
 import { AnalyzeContractDto } from '../dto/analyze-contract.dto';
 export interface AnalysisResult {
     id: string;
+    userId?: string;
     timestamp: Date;
     contracts: any[];
     summary: {
@@ -25,7 +26,8 @@ export declare class AnalysisService {
     private readonly analysisCache;
     constructor(pipelineService: AnalysisPipelineService);
     analyze(dto: AnalyzeContractDto): Promise<AnalysisResult>;
-    getAnalysisById(id: string): Promise<AnalysisResult | null>;
+    getAnalysisById(id: string, userId?: string): Promise<AnalysisResult | null>;
+    getHistoryByUserId(userId: string): Promise<AnalysisResult[]>;
     getSecurityIssues(id: string): Promise<any[] | null>;
     getOptimizations(id: string): Promise<any[] | null>;
     getAiReview(id: string): Promise<any[] | null>;

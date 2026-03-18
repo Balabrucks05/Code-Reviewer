@@ -19,7 +19,7 @@ let BytecodeAnalyzerService = BytecodeAnalyzerService_1 = class BytecodeAnalyzer
             return issues;
         }
         const bytecodeSize = contract.deployedBytecode.length / 2;
-        this.logger.log(`Contract ${contract.name}: ${bytecodeSize} bytes (${((bytecodeSize / this.MAX_CONTRACT_SIZE) * 100).toFixed(1)}% of limit)`);
+        this.logger.debug(`Contract ${contract.name}: ${bytecodeSize} bytes (${((bytecodeSize / this.MAX_CONTRACT_SIZE) * 100).toFixed(1)}% of limit)`);
         if (bytecodeSize > this.MAX_CONTRACT_SIZE * 0.8) {
             issues.push({
                 id: (0, uuid_1.v4)(),
@@ -59,7 +59,9 @@ function _commonLogic() internal {
                 bytecodeSaving: totalBytes,
             });
         }
-        if (bytecode.endsWith('0033')) {
+        const isLikelyTestOrMock = contract.name?.toLowerCase().includes('test') || contract.name?.toLowerCase().includes('mock');
+        const isLikelyUpgradeable = bytecode.includes('f4');
+        if (bytecode.endsWith('0033') && !isLikelyTestOrMock && !isLikelyUpgradeable) {
             const metadataLength = this.estimateMetadataSize(bytecode);
             if (metadataLength > 50) {
                 issues.push({

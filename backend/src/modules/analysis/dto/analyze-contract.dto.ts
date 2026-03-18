@@ -55,4 +55,9 @@ export class AnalyzeContractDto {
     @ValidateNested()
     @Type(() => AnalysisOptionsDto)
     options?: AnalysisOptionsDto;
+
+    @ApiPropertyOptional({ description: 'User ID of the requester' })
+    @IsOptional()
+    @IsString()
+    userId?: string;
 }

@@ -21,7 +21,7 @@ let AiReviewService = AiReviewService_1 = class AiReviewService {
         this.llmProvider = llmProvider;
     }
     async reviewContract(contract, sourceContent) {
-        this.logger.log(`Starting AI review for ${contract.name}`);
+        this.logger.debug(`Starting AI review for ${contract.name}`);
         const comments = [];
         comments.push(...this.runHeuristicChecks(sourceContent));
         try {
@@ -204,13 +204,17 @@ uint256[50] private __gap;`,
 3. Production readiness
 4. Architecture decisions
 
+CRITICAL RULES:
+- DO NOT repeatedly suggest the same gas optimizations, group similar logic together.
+- Keep recommendations highly actionable and avoid generic or overly repetitive advice.
+
 Respond in JSON format with an array of comments, each having:
 - category: one of [architecture, readability, best_practice, production_readiness]
 - title: short title
 - reasoning: why this matters
 - suggestion: what to do
 - priority: one of [required, recommended, optional]`;
-        const prompt = `Analyze this Solidity contract:\n\n\`\`\`solidity\n${source.substring(0, 4000)}\n\`\`\``;
+        const prompt = `Analyze this Solidity contract: \n\n\`\`\`solidity\n${source.substring(0, 4000)}\n\`\`\``;
         const response = await this.llmProvider.generateCompletion(prompt, systemPrompt);
         return this.parseLlmResponse(response.content);
     }
