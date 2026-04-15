@@ -25,17 +25,53 @@ export class AnalysisPipelineService {
     );
 
     if (!compilationResult.success) {
-      this.logger.warn('Compilation failed - returning error response');
+      this.logger.warn('Compilation failed - running source-level analysis on raw code');
       const errorMessages = compilationResult.errors.map((e: any) => e.message).join(', ');
       const hasImportErrors =
         errorMessages.includes('not found') || errorMessages.includes('import');
 
+      // Even when compilation fails, run source-level analysis
+      const sourceResults: any[] = [];
+      let totalSecurityScore = 0;
+      let totalGasScore = 0;
+      let totalCodeQualityScore = 0;
+
+      for (const contractSource of input.contracts) {
+        const contractName = this.extractContractName(contractSource.content) || contractSource.filename?.replace('.sol', '') || 'Unknown';
+        const mockContract = { name: contractName, abi: [], bytecode: '', deployedBytecode: '' };
+
+        const [securityIssues, gasOptimizations, aiReviewComments] = await Promise.all([
+          this.runSecurityAnalysis(mockContract, contractSource.content, input.options.enableSecurityAudit),
+          this.runGasOptimization(mockContract, contractSource.content, input.options.enableGasOptimization),
+          this.runAiReview(mockContract, contractSource.content, input.options.enableAiReview),
+        ]);
+
+        const securityScore = this.calculateSecurityScore(securityIssues);
+        const codeQualityScore = this.calculateCodeQualityScore(aiReviewComments);
+        const gasScore = Math.max(0, 100 - gasOptimizations.length * 5);
+
+        totalSecurityScore += securityScore;
+        totalGasScore += gasScore;
+        totalCodeQualityScore += codeQualityScore;
+
+        sourceResults.push({
+          name: contractName,
+          bytecodeSize: 0,
+          estimatedDeploymentGas: 0,
+          securityIssues,
+          gasOptimizations,
+          aiReviewComments,
+        });
+      }
+
+      const contractCount = input.contracts.length || 1;
       return {
         success: false,
-        contracts: [],
-        securityScore: 0,
-        gasScore: 0,
-        codeQualityScore: 0,
+        contracts: sourceResults,
+        securityScore: Math.round(totalSecurityScore / contractCount),
+        gasScore: Math.round(totalGasScore / contractCount),
+        codeQualityScore: Math.round(totalCodeQualityScore / contractCount),
+        overallScore: Math.round((totalSecurityScore + totalGasScore + totalCodeQualityScore) / (contractCount * 3)),
         compilationWarnings: compilationResult.warnings,
         compilationErrors: compilationResult.errors.map((e: any) => ({
           ...e,
@@ -195,6 +231,11 @@ export class AnalysisPipelineService {
       }
     }
     return Math.max(0, 100 - deductions);
+  }
+
+  private extractContractName(source: string): string | null {
+    const match = source.match(/contract\s+(\w+)/);
+    return match ? match[1] : null;
   }
 
   private estimateDeploymentGas(bytecode: string): number {

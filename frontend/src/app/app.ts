@@ -27,6 +27,20 @@ import { NavbarComponent } from './shared/components/navbar/navbar.component';
       padding: var(--space-6);
       padding-top: calc(var(--space-6) + 70px);
     }
+
+    @media (max-width: 768px) {
+      .main-content {
+        padding: var(--space-4);
+        padding-top: calc(var(--space-4) + 60px);
+      }
+    }
+
+    @media (max-width: 480px) {
+      .main-content {
+        padding: var(--space-3);
+        padding-top: calc(var(--space-3) + 52px);
+      }
+    }
   `]
 })
 export class AppComponent { }

@@ -1,13 +1,14 @@
-import { Component, OnInit, signal, computed } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal, computed, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AnalysisService, AnalysisResult, SecurityIssue, GasOptimization, AiReviewComment } from '../../core/services/analysis.service';
+import gsap from 'gsap';
 
 @Component({
   selector: 'app-results',
   standalone: true,
   imports: [],
   template: `
-    <div class="results fade-in">
+    <div class="results">
       @if (result()) {
         @if (result()!.success === false && result()!.compilationErrors?.length) {
           <!-- Compilation Error State -->
@@ -47,10 +48,118 @@ import { AnalysisService, AnalysisResult, SecurityIssue, GasOptimization, AiRevi
                 Edit Contract
               </button>
             </div>
+
+            <!-- Partial Results from source-level analysis -->
+            @if (result()!.contracts && result()!.contracts.length > 0) {
+              <div class="partial-results-section">
+                <div class="partial-results-header">
+                  <h2>Source-Level Analysis <span class="badge badge-info">Partial</span></h2>
+                  <p class="text-secondary">The following insights were gathered from source code analysis without compilation.</p>
+                </div>
+
+                <!-- Partial Score Cards -->
+                <div class="partial-scores">
+                  <div class="mini-score-card glass-premium">
+                    <div class="mini-score-value gradient-text-animated">{{ result()!.securityScore || 0 }}</div>
+                    <div class="mini-score-label">Security</div>
+                  </div>
+                  <div class="mini-score-card glass-premium">
+                    <div class="mini-score-value gradient-text-animated">{{ result()!.gasScore || 0 }}</div>
+                    <div class="mini-score-label">Gas Efficiency</div>
+                  </div>
+                  <div class="mini-score-card glass-premium">
+                    <div class="mini-score-value gradient-text-animated">{{ result()!.codeQualityScore || 0 }}</div>
+                    <div class="mini-score-label">Code Quality</div>
+                  </div>
+                </div>
+
+                @for (contract of result()!.contracts; track contract.name) {
+                  <!-- Security Issues -->
+                  @if (contract.securityIssues.length > 0) {
+                    <div class="partial-section">
+                      <h3>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                        </svg>
+                        Security Issues
+                      </h3>
+                      @for (issue of contract.securityIssues; track issue.id) {
+                        <div class="finding-card glass-premium" [class]="'severity-border-' + issue.severity">
+                          <div class="finding-header">
+                            <span class="badge" [class]="'badge-' + issue.severity">{{ issue.severity }}</span>
+                            <span class="finding-title">{{ issue.title }}</span>
+                          </div>
+                          <p class="finding-desc">{{ issue.description }}</p>
+                          @if (issue.recommendation) {
+                            <div class="finding-fix">
+                              <strong>Fix:</strong> {{ issue.recommendation }}
+                            </div>
+                          }
+                        </div>
+                      }
+                    </div>
+                  }
+
+                  <!-- Gas Optimizations -->
+                  @if (contract.gasOptimizations.length > 0) {
+                    <div class="partial-section">
+                      <h3>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+                        </svg>
+                        Gas Optimizations
+                      </h3>
+                      @for (opt of contract.gasOptimizations; track opt.id) {
+                        <div class="finding-card glass-premium severity-border-info">
+                          <div class="finding-header">
+                            <span class="badge badge-info">{{ opt.impact }}</span>
+                            <span class="finding-title">{{ opt.title }}</span>
+                            @if (opt.estimatedGasSaving) {
+                              <span class="gas-saving">~{{ opt.estimatedGasSaving }} gas saved</span>
+                            }
+                          </div>
+                          <p class="finding-desc">{{ opt.description }}</p>
+                          @if (opt.suggestedCode) {
+                            <pre class="code-suggestion"><code>{{ opt.suggestedCode }}</code></pre>
+                          }
+                        </div>
+                      }
+                    </div>
+                  }
+
+                  <!-- AI Review Comments -->
+                  @if (contract.aiReviewComments.length > 0) {
+                    <div class="partial-section">
+                      <h3>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <circle cx="12" cy="12" r="10"/>
+                          <path d="M12 16v-4M12 8h.01"/>
+                        </svg>
+                        AI Suggestions
+                      </h3>
+                      @for (comment of contract.aiReviewComments; track comment.id) {
+                        <div class="finding-card glass-premium severity-border-ai">
+                          <div class="finding-header">
+                            <span class="badge badge-ai">{{ comment.priority }}</span>
+                            <span class="finding-title">{{ comment.title }}</span>
+                          </div>
+                          <p class="finding-desc">{{ comment.reasoning }}</p>
+                          @if (comment.suggestion) {
+                            <div class="finding-fix">
+                              <strong>Suggestion:</strong> {{ comment.suggestion }}
+                            </div>
+                          }
+                        </div>
+                      }
+                    </div>
+                  }
+                }
+              </div>
+            }
           </div>
         } @else {
         <!-- Header with Scores -->
-        <header class="results-header">
+        <header class="results-header" #resultsHeader>
           <div class="header-info">
             <button class="back-btn btn btn-ghost" (click)="goBack()">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -59,12 +168,12 @@ import { AnalysisService, AnalysisResult, SecurityIssue, GasOptimization, AiRevi
               Back
             </button>
             <div class="title-group">
-              <h1>Analysis Results</h1>
+              <h1>Analysis <span class="gradient-text-animated">Results</span></h1>
               <span class="timestamp">{{ formatDate(result()!.timestamp) }}</span>
             </div>
           </div>
           
-          <div class="scores-grid stagger">
+          <div class="scores-grid" #scoresGrid>
             <div class="score-card" [class.critical]="result()!.overallScore < 50">
               <div class="score-ring-container">
                 <svg class="score-ring" viewBox="0 0 120 120">
@@ -82,7 +191,7 @@ import { AnalysisService, AnalysisResult, SecurityIssue, GasOptimization, AiRevi
                     [style.stroke-dashoffset]="getOffset(result()!.overallScore)"
                   />
                 </svg>
-                <div class="score-value">{{ result()!.overallScore }}</div>
+                <div class="score-value counter" #scoreVal>0</div>
               </div>
               <div class="score-label">Overall Score</div>
             </div>
@@ -111,8 +220,8 @@ import { AnalysisService, AnalysisResult, SecurityIssue, GasOptimization, AiRevi
         </header>
 
         <!-- Summary Cards -->
-        <section class="summary-section">
-          <div class="summary-cards stagger">
+        <section class="summary-section" #summarySection>
+          <div class="summary-cards">
             <div class="summary-card critical-card" [class.has-issues]="result()!.summary.criticalCount > 0">
               <div class="card-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg></div>
               <div class="card-value">{{ result()!.summary.criticalCount }}</div>
@@ -142,7 +251,7 @@ import { AnalysisService, AnalysisResult, SecurityIssue, GasOptimization, AiRevi
         </section>
 
         <!-- Tab Navigation -->
-        <nav class="tabs-nav">
+        <nav class="tabs-nav" #tabsNav>
           <button 
             class="tab-btn" 
             [class.active]="activeTab() === 'security'"
@@ -428,7 +537,8 @@ import { AnalysisService, AnalysisResult, SecurityIssue, GasOptimization, AiRevi
       stroke: url(#scoreGradient);
       stroke-width: 8;
       stroke-linecap: round;
-      transition: stroke-dashoffset 1s var(--ease-out-expo);
+      transition: stroke-dashoffset 1.5s var(--ease-out-expo);
+      filter: drop-shadow(0 0 6px rgba(99, 102, 241, 0.4));
     }
 
     .score-value {
@@ -450,7 +560,7 @@ import { AnalysisService, AnalysisResult, SecurityIssue, GasOptimization, AiRevi
       background: var(--color-bg-secondary);
       padding: var(--space-4);
       border-radius: var(--radius-lg);
-      border: 1px solid rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--color-border-subtle);
     }
 
     .mini-score {
@@ -486,8 +596,13 @@ import { AnalysisService, AnalysisResult, SecurityIssue, GasOptimization, AiRevi
       border-radius: var(--radius-lg);
       padding: var(--space-5);
       text-align: center;
-      border: 1px solid rgba(255, 255, 255, 0.06);
-      transition: all 0.3s var(--ease-out-expo);
+      border: 1px solid var(--color-border-subtle);
+      transition: all 0.4s var(--ease-out-expo);
+    }
+
+    .summary-card:hover {
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-lg);
     }
 
     .summary-card.has-issues {
@@ -532,7 +647,7 @@ import { AnalysisService, AnalysisResult, SecurityIssue, GasOptimization, AiRevi
       display: flex;
       gap: var(--space-2);
       margin-bottom: var(--space-6);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      border-bottom: 1px solid var(--color-border-subtle);
       padding-bottom: var(--space-2);
     }
 
@@ -548,12 +663,13 @@ import { AnalysisService, AnalysisResult, SecurityIssue, GasOptimization, AiRevi
       font-size: 0.875rem;
       font-weight: 500;
       cursor: pointer;
-      transition: all 0.2s var(--ease-out-expo);
+      transition: all 0.3s var(--ease-out-expo);
     }
 
     .tab-btn:hover {
-      background: rgba(255, 255, 255, 0.05);
+      background: var(--color-fill-subtle);
       color: var(--color-text-primary);
+      transform: translateY(-1px);
     }
 
     .tab-btn.active {
@@ -581,6 +697,11 @@ import { AnalysisService, AnalysisResult, SecurityIssue, GasOptimization, AiRevi
 
     .issue-card {
       padding: var(--space-5);
+      transition: transform 0.3s var(--ease-out-expo);
+    }
+
+    .issue-card:hover {
+      transform: translateX(4px);
     }
 
     .issue-card.severity-critical { border-left: 3px solid var(--color-critical); }
@@ -754,9 +875,69 @@ import { AnalysisService, AnalysisResult, SecurityIssue, GasOptimization, AiRevi
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
+
+    /* ── Mobile Responsive ── */
+    @media (max-width: 768px) {
+      .results { padding: 0 var(--space-4); }
+      .results-header {
+        flex-direction: column;
+        gap: var(--space-4);
+      }
+      .scores-grid {
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+      .summary-cards {
+        flex-direction: column;
+      }
+      .code-comparison {
+        grid-template-columns: 1fr;
+      }
+      .code-comparison .comparison-arrow {
+        transform: rotate(90deg);
+      }
+      .tabs-nav {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+      }
+      .tabs-nav::-webkit-scrollbar { display: none; }
+      .tab-btn {
+        white-space: nowrap;
+        padding: var(--space-2) var(--space-3);
+        font-size: 0.8rem;
+      }
+      .issue-card, .gas-card, .ai-card {
+        padding: var(--space-4);
+      }
+      .score-ring-container { width: 100px; }
+      .score-ring-container svg { width: 100px; height: 100px; }
+    }
+
+    @media (max-width: 480px) {
+      .results { padding: 0 var(--space-3); }
+      .results-header h1 { font-size: 1.25rem; }
+      .score-ring-container { width: 80px; }
+      .score-ring-container svg { width: 80px; height: 80px; }
+      .score-val { font-size: 1.25rem; }
+      .score-card.mini { padding: var(--space-3); }
+      .mini-score .value { font-size: 1.25rem; }
+      .summary-card { padding: var(--space-4); }
+      .tab-btn { font-size: 0; gap: 0; padding: var(--space-2); }
+      .tab-btn svg { font-size: initial; }
+      .tab-count { display: none; }
+      .issue-card, .gas-card, .ai-card { padding: var(--space-3); }
+      .error-container { padding: var(--space-4); }
+    }
   `]
 })
-export class ResultsComponent implements OnInit {
+export class ResultsComponent implements OnInit, AfterViewInit, OnDestroy {
+  @ViewChild('resultsHeader') resultsHeader!: ElementRef;
+  @ViewChild('scoresGrid') scoresGrid!: ElementRef;
+  @ViewChild('scoreVal') scoreValEl!: ElementRef;
+  @ViewChild('summarySection') summarySection!: ElementRef;
+  @ViewChild('tabsNav') tabsNav!: ElementRef;
+
   result = signal<AnalysisResult | null>(null);
   activeTab = signal<'security' | 'gas' | 'ai'>('security');
 
@@ -783,7 +964,6 @@ export class ResultsComponent implements OnInit {
   ngOnInit() {
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
-      // Try to get from service cache first
       const cached = this.analysisService.currentAnalysis();
       if (cached?.id === id) {
         this.result.set(cached);
@@ -793,6 +973,50 @@ export class ResultsComponent implements OnInit {
           error: () => this.router.navigate(['/dashboard'])
         });
       }
+    }
+  }
+
+  ngAfterViewInit() {
+    // Wait for result to load before animating
+    setTimeout(() => this.runEntrance(), 100);
+  }
+
+  ngOnDestroy() {
+    gsap.killTweensOf('*');
+  }
+
+  private runEntrance() {
+    if (!this.resultsHeader?.nativeElement) return;
+
+    const tl = gsap.timeline({ defaults: { ease: 'expo.out' } });
+    tl.from(this.resultsHeader.nativeElement, { opacity: 0, y: -30, duration: 0.6 });
+
+    if (this.scoresGrid?.nativeElement) {
+      const cards = this.scoresGrid.nativeElement.querySelectorAll('.score-card');
+      tl.from(cards, { opacity: 0, scale: 0.8, stagger: 0.1, duration: 0.5 }, '-=0.3');
+    }
+
+    // Animate score counter
+    if (this.scoreValEl?.nativeElement && this.result()) {
+      const target = this.result()!.overallScore;
+      gsap.to({ val: 0 }, {
+        val: target,
+        duration: 1.5,
+        ease: 'power2.out',
+        onUpdate: function () {
+          const el = document.querySelector('.score-value.counter') as HTMLElement;
+          if (el) el.textContent = Math.round((this as any).targets()[0].val).toString();
+        }
+      });
+    }
+
+    if (this.summarySection?.nativeElement) {
+      const summaryCards = this.summarySection.nativeElement.querySelectorAll('.summary-card');
+      tl.from(summaryCards, { opacity: 0, y: 20, stagger: 0.08, duration: 0.5 }, '-=0.3');
+    }
+
+    if (this.tabsNav?.nativeElement) {
+      tl.from(this.tabsNav.nativeElement, { opacity: 0, y: 15, duration: 0.4 }, '-=0.2');
     }
   }
 

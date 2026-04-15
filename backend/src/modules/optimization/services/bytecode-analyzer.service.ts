@@ -76,7 +76,9 @@ function _commonLogic() internal {
         }
 
         // Check for metadata hash (can be removed in production)
-        if (bytecode.endsWith('0033')) {
+        const isLikelyTestOrMock = contract.name?.toLowerCase().includes('test') || contract.name?.toLowerCase().includes('mock');
+        const isLikelyUpgradeable = bytecode.includes('f4');
+        if (bytecode.endsWith('0033') && !isLikelyTestOrMock && !isLikelyUpgradeable) {
             // CBOR encoded metadata is typically at the end
             const metadataLength = this.estimateMetadataSize(bytecode);
 
